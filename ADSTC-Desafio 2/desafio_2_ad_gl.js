@@ -1,4 +1,4 @@
-define(['N/ui/serverWidget'], function(sw) {
+define(['N/ui/serverWidget', 'N/search', 'N/log'], function(sw, search, log) {
 	/**
 	 * Suitlet desfaio numero 2 - Sistema de busquedad de cuotas
 	 *
@@ -33,56 +33,33 @@ define(['N/ui/serverWidget'], function(sw) {
 	 * @function onRequest
 	 */
 	function onRequest(context) {
-		dpForm(context);
+		if (context.request.method === 'GET') {
+			var getForm = createForm(context);
+		} else {
+
+			context.response.writePage({
+				pageObject: displayList(translate(findCases(context)))
+			});
+
+		}
 	}
 
-	function dpForm(context) {
-		var form = sw.createForm({ title: "Form 101" });
-		var field = form.addField({ id: "textfield", type: sw.FieldType.TEXT, label: "Text" });
-		field.layoutType = sw.FieldLayoutType.NORMAL;
-		field.updateBreakType({
-			breakType: sw.FieldBreakType.STARTCOL
-		});
+	function createForm(context) {
+		var form = sw.createForm({ title: "Quota Searcher" });
 
 		form.addField({
-			id: 'datefield',
-			type: sw.FieldType.DATE,
-			label: 'Date'
-		});
-		form.addField({
-			id: 'currencyfield',
-			type: sw.FieldType.CURRENCY,
-			label: 'Currency'
-		});
+			id: 'qotes_int',
+			type: sw.FieldType.INTEGER,
+			label: 'Q Number',
+			container: 'fieldgroup_filters'
 
-		var select = form.addField({
-			id: 'selectfield',
+		});
+		var country = form.addField({
+			id: 'country_select',
 			type: sw.FieldType.SELECT,
-			label: 'Select'
-		});
-		select.addSelectOption({
-			value: 'a',
-			text: 'Albert'
-		});
-		select.addSelectOption({
-			value: 'b',
-			text: 'Baron'
-		});
-
-		var sublist = form.addSublist({
-			id: 'sublist',
-			type: sw.SublistType.INLINEEDITOR,
-			label: 'Inline Editor Sublist'
-		});
-		sublist.addField({
-			id: 'sublist1',
-			type: sw.FieldType.DATE,
-			label: 'Date'
-		});
-		sublist.addField({
-			id: 'sublist2',
-			type: sw.FieldType.TEXT,
-			label: 'Text'
+			label: 'Country',
+			source: 'customlist_training_countries',
+			container: 'fieldgroup_filters'
 		});
 
 		form.addSubmitButton({
@@ -91,9 +68,77 @@ define(['N/ui/serverWidget'], function(sw) {
 
 		context.response.writePage(form);
 
-		context.response.write("You have entered: ${textField} ${dateField} ${currencyField} ${selectField} ${sublistField1} ${sublistField2}");
 	}
 
+	function displayList(results) {
+		var postList = sw.createList('Resultados de Busqueda Quotas');
+		postList.addColumn({
+			id: 'custrecord_qnumber',
+			type: sw.FieldType.INTEGER,
+			label: 'Q number',
+		});
+		postList.addColumn({
+			id: 'custrecord_country',
+			type: sw.FieldType.TEXT,
+			label: 'Country',
+		});
+		postList.addColumn({
+			id: 'custrecord_margin',
+			type: sw.FieldType.PERCENT,
+			label: 'Margin',
+		});
+		postList.addColumn({
+			id: 'custrecord_totalmargin',
+			type: sw.FieldType.CURRENCY,
+			label: 'Total Margin',
+		});
+		postList.addColumn({
+			id: 'custrecord_manufacturer',
+			type: sw.FieldType.TEXT,
+			label: 'Manufacturer',
+		});
+		postList.addRows({ rows: results });
+		return postList;
+	}
+
+	function findCases(context) {
+		var filters = [];
+		filters.push(["custrecord_qnumber_gl", "equalto", context.request.parameters.qotes_int]);
+		filters.push("AND");
+		filters.push(["custrecord_country_gl", "is", context.request.parameters.country_select]);
+		log.audit({ title: "Filer: ", details: filters })
+
+
+		return search.create({
+				type: 'customrecord_training_quotas_gl',
+				title: 'Search Quotas',
+				columns: [
+					'custrecord_qnumber_gl',
+					'custrecord_country_gl',
+					'custrecord_margin_gl',
+					'custrecord_totalmargin_gl',
+					'custrecord_manufacturer_gl'
+				],
+				filters: filters
+			})
+			.run()
+			.getRange({ start: 0, end: 100 });
+
+	}
+
+	function resultToOjb(result) {
+		return {
+			custrecord_qnumber: result.getValue({ name: 'custrecord_qnumber_gl' }),
+			custrecord_country: result.getText({ name: 'custrecord_country_gl' }),
+			custrecord_margin: result.getValue({ name: 'custrecord_margin_gl' }),
+			custrecord_totalmargin: result.getValue({ name: 'custrecord_totalmargin_gl' }),
+			custrecord_manufacturer: result.getText({ name: 'custrecord_manufacturer_gl' }),
+		};
+	}
+
+	function translate(results) {
+		return results.map(resultToOjb);
+	}
 
 	exports.onRequest = onRequest;
 	return exports;
