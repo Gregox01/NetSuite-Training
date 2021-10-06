@@ -1,0 +1,40 @@
+scriptid: 762
+
+deployid:1
+
+GET request:
+Params(id = "Record id").Algunos eventos ya creados (101,201,501,202).
+Devuelve toda la info del record evento.
+
+PUT request:
+Todos los campos son opcionales. Si se modifica un evento con fecha anterior a la actual tira error.
+Body:
+{
+    "parameters":{
+        "cRecord_id":501,
+        "mod_fields":{
+            "name": "<Your Event Name>",
+            "event_guests_gl": [3,4,5],
+            "event_country_gl": "Argentina",
+            "event_city_gl": "Catamarca",
+            "event_description_gl": "<Your event description>",
+            "custrecord_event_datetime_gl":"MM/DD/YYYY"
+        }
+
+    }
+}
+POST request:
+Todos los campos son obligatorios.
+Body:
+{
+    "parameters":{
+    "name": "<Your Event Name>",
+    "event_guests_gl": [3,4,5],
+    "event_country_gl": "Argentina",
+    "event_city_gl": "Catamarca",
+    "event_description_gl": "<Your event description>",
+    "custrecord_event_datetime_gl":"MM/DD/YYYY"
+    }
+ }
+ DELETE request:
+ Params(id = "Record id").Algunos eventos ya creados para inactivar(404).
